@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Neverend Lab</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header class="header"><div class="wrap nav"><a class="brand" href="/"><span class="logo">N</span> NEVEREND LAB</a><nav class="links"><a class="active" href="/">Início</a><a href="/sqli-vulnerable.html">SQLi</a><a href="/sqli-fixed.html">SQLi Fixed</a><a href="/xss-vulnerable.html">XSS</a><a href="/xss-fixed.html">XSS Fixed</a></nav></div></header>
+<main class="wrap main">
+  <section class="hero"><span class="eyebrow">Laboratório local de segurança</span><h1>Teste a falha.<br>Entenda a correção.</h1><p>Aplicação Node.js com MySQL local. As consultas SQL são executadas pelo MySQL; os comentários ficam armazenados no banco local.</p><span class="tag blue">Dados fictícios · somente localhost</span></section>
+  <div class="grid">
+    <a class="card tile" href="/sqli-vulnerable.html"><span class="tag red">SQLi · VULNERÁVEL</span><h2>Busca vulnerável</h2><p>Busca por nome e concatena a entrada em SQL real. Laboratório local, não reutilize em produção.</p><strong>Abrir demonstração →</strong></a>
+    <a class="card tile" href="/sqli-fixed.html"><span class="tag green">SQLi · CORRIGIDO</span><h2>Busca parametrizada</h2><p>Consulta MySQL com parâmetros preparados; o payload é tratado como texto.</p><strong>Abrir demonstração →</strong></a>
+    <a class="card tile" href="/xss-vulnerable.html"><span class="tag red">XSS · VULNERÁVEL</span><h2>Comentário inseguro</h2><p>Salva comentários no MySQL e os renderiza como HTML para demonstrar XSS armazenado.</p><strong>Abrir demonstração →</strong></a>
+    <a class="card tile" href="/xss-fixed.html"><span class="tag green">XSS · CORRIGIDO</span><h2>Comentário seguro</h2><p>Exibe os mesmos comentários como texto literal, usando textContent.</p><strong>Abrir demonstração →</strong></a>
+  </div>
+  <section class="panel"><h2>Status do MySQL</h2><p class="muted">O serviço responde apenas em 127.0.0.1 e é iniciado pelo comando <code>npm run db:up</code>.</p><button id="checkDb" class="button" type="button">Testar conexão</button><div id="dbStatus" class="result">Clique para testar.</div></section>
+  <section class="note"><strong>Aviso:</strong> este laboratório contém SQL Injection e XSS intencionais. Não o publique nem exponha a rede. O servidor Node está preso a 127.0.0.1; o repositório GitHub deve conter apenas o código, nunca o arquivo .env.</section>
+</main>
+<footer class="footer"><div class="wrap">NEVEREND LAB · Node.js + MySQL local</div></footer>
+<script>
+document.getElementById('checkDb').addEventListener('click', async () => {
+  const out = document.getElementById('dbStatus'); out.textContent = 'Conectando...';
+  try { const r = await fetch('/api/health'); const data = await r.json(); out.className = 'result ' + (data.ok ? 'ok' : 'error'); out.textContent = data.ok ? `MySQL conectado · banco: ${data.database} · modo de laboratório: ${data.labMode ? 'ativo' : 'desativado'}` : data.message; }
+  catch (_e) { out.className = 'result error'; out.textContent = 'Não foi possível alcançar o servidor. Rode npm run dev e confira MySQL.'; }
+});
+</script>
+</body></html>

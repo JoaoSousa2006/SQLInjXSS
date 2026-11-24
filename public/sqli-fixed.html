@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SQLi corrigida · Neverend</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header class="header"><div class="wrap nav"><a class="brand" href="/"><span class="logo">N</span> NEVEREND LAB</a><nav class="links"><a href="/">Início</a><a href="/sqli-vulnerable.html">SQLi</a><a class="active" href="/sqli-fixed.html">SQLi Fixed</a><a href="/xss-vulnerable.html">XSS</a><a href="/xss-fixed.html">XSS Fixed</a></nav></div></header>
+<main class="wrap main">
+  <div class="page-title"><div><span class="eyebrow">SQL Injection · consulta preparada</span><h1>Busca protegida</h1></div><span class="tag green">FIXED</span></div>
+  <div class="note">A busca usa uma instrução preparada (`?`). Aspas e palavras SQL permanecem apenas como texto do nome pesquisado.</div>
+  <section class="panel"><h2>Pesquisar usuário pelo nome</h2><p class="muted">Teste <code>Alice</code> e depois cole <code>'; SHOW DATABASES; -- </code>. O MySQL executa a consulta, mas o payload não vira SQL.</p>
+    <form id="searchForm"><div class="form-row"><input class="input" id="searchText" maxlength="120" placeholder="Ex.: Alice Almeida" autocomplete="off"><button class="button" type="submit">Pesquisar com segurança</button></div></form><div id="result" class="result">Aguardando consulta.</div><div id="rows" class="table-wrap"></div>
+  </section>
+  <section class="panel"><h2>Regra segura</h2><pre class="code">SELECT id, name, email, role, status
+FROM users
+WHERE name LIKE ?
+ORDER BY id
+
+// parâmetro enviado separadamente: %termo% </pre></section>
+</main><footer class="footer"><div class="wrap">NEVEREND LAB · SQLi Fixed · apenas localhost</div></footer>
+<script>
+const form = document.getElementById('searchForm');
+const input = document.getElementById('searchText');
+const result = document.getElementById('result');
+const rowsBox = document.getElementById('rows');
+function renderUsers(users) {
+  rowsBox.replaceChildren();
+  if (!users.length) { rowsBox.textContent = 'Nenhum usuário encontrado.'; return; }
+  const table = document.createElement('table'); table.className = 'data-table';
+  const columns = [['id','ID'],['name','Nome'],['email','E-mail'],['role','Perfil'],['status','Status']];
+  const head = document.createElement('tr'); columns.forEach(([, label]) => { const th = document.createElement('th'); th.textContent = label; head.appendChild(th); });
+  const thead = document.createElement('thead'); thead.appendChild(head); table.appendChild(thead);
+  const body = document.createElement('tbody');
+  users.forEach(user => { const tr = document.createElement('tr'); columns.forEach(([key]) => { const td = document.createElement('td'); td.textContent = String(user[key] ?? ''); tr.appendChild(td); }); body.appendChild(tr); });
+  table.appendChild(body); rowsBox.appendChild(table);
+}
+form.addEventListener('submit', async event => {
+  event.preventDefault(); result.className = 'result'; result.textContent = 'Consultando com parâmetro preparado...'; rowsBox.replaceChildren();
+  try {
+    const response = await fetch(`/api/users/fixed?name=${encodeURIComponent(input.value)}`);
+    const data = await response.json();
+    if (!response.ok || !data.ok) { result.className = 'result error'; result.textContent = data.message || 'A consulta falhou.'; return; }
+    result.className = 'result ok'; result.textContent = `${data.rows.length} usuário(s) retornado(s). Entrada tratada como texto.`; renderUsers(data.rows);
+  } catch (_error) { result.className = 'result error'; result.textContent = 'Falha ao chamar o servidor local.'; }
+});
+</script>
+</body></html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>XSS corrigido · Neverend</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header class="header"><div class="wrap nav"><a class="brand" href="/"><span class="logo">N</span> NEVEREND LAB</a><nav class="links"><a href="/">Início</a><a href="/sqli-vulnerable.html">SQLi</a><a href="/sqli-fixed.html">SQLi Fixed</a><a href="/xss-vulnerable.html">XSS</a><a class="active" href="/xss-fixed.html">XSS Fixed</a></nav></div></header>
+<main class="wrap main">
+  <div class="page-title"><div><span class="eyebrow">Cross-site scripting · saída segura</span><h1>Comentário protegido</h1></div><span class="tag green">FIXED</span></div>
+  <div class="note">Esta página usa os mesmos comentários persistidos, mas insere autor e conteúdo como texto literal com <code>textContent</code>.</div>
+  <section class="panel"><h2>Adicionar comentário</h2><p class="muted">Teste o mesmo payload da página vulnerável: aqui ele será mostrado como texto e não executará.</p>
+    <div class="payloads"><button class="button secondary" id="fillPayload" type="button">Preencher payload de teste</button></div>
+    <form id="commentForm" class="comment-form"><label for="author">Autor</label><input class="input" id="author" maxlength="80" placeholder="Ex.: Alice"><label for="comment">Comentário</label><textarea id="comment" maxlength="2000" placeholder="Digite um comentário de teste"></textarea><button class="button" type="submit">Salvar no MySQL</button></form><div id="status" class="result">Aguardando envio.</div>
+  </section>
+  <section class="panel"><div class="panel-heading"><h2>Comentários armazenados</h2><div><button id="refresh" class="button secondary" type="button">Atualizar</button> <button id="clear" class="button danger" type="button">Apagar todos</button></div></div><div id="comments" class="comment-list">Carregando...</div></section>
+</main><footer class="footer"><div class="wrap">NEVEREND LAB · XSS Fixed · apenas localhost</div></footer>
+<script>
+const form = document.getElementById('commentForm');
+const statusBox = document.getElementById('status');
+const commentsBox = document.getElementById('comments');
+const payload = `<img src=x onerror="alert('XSS de demonstração')">`;
+document.getElementById('fillPayload').addEventListener('click', () => { document.getElementById('comment').value = payload; });
+async function loadComments() {
+  commentsBox.textContent = 'Carregando...';
+  try {
+    const response = await fetch('/api/comments'); const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.message || 'Falha ao carregar.');
+    commentsBox.replaceChildren();
+    if (!data.rows.length) { commentsBox.textContent = 'Ainda não há comentários.'; return; }
+    data.rows.forEach(item => {
+      const card = document.createElement('article'); card.className = 'comment-card';
+      const meta = document.createElement('div'); meta.className = 'comment-meta';
+      const author = document.createElement('strong'); author.textContent = item.author;
+      const date = document.createElement('span'); date.textContent = item.createdAt;
+      meta.append(author, date);
+      const body = document.createElement('div'); body.className = 'comment-body'; body.textContent = item.comment;
+      card.append(meta, body); commentsBox.appendChild(card);
+    });
+  } catch (error) { commentsBox.textContent = error.message; }
+}
+form.addEventListener('submit', async event => {
+  event.preventDefault(); statusBox.className = 'result'; statusBox.textContent = 'Salvando...';
+  try {
+    const response = await fetch('/api/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author: document.getElementById('author').value, comment: document.getElementById('comment').value }) });
+    const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Falha ao salvar.');
+    statusBox.className = 'result ok'; statusBox.textContent = data.message; document.getElementById('comment').value = ''; await loadComments();
+  } catch (error) { statusBox.className = 'result error'; statusBox.textContent = error.message; }
+});
+document.getElementById('refresh').addEventListener('click', loadComments);
+document.getElementById('clear').addEventListener('click', async () => {
+  if (!confirm('Apagar todos os comentários do banco local?')) return;
+  const response = await fetch('/api/comments', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'CLEAR' }) });
+  const data = await response.json(); statusBox.className = 'result ' + (data.ok ? 'ok' : 'error'); statusBox.textContent = data.message; await loadComments();
+});
+loadComments();
+</script>
+</body></html>

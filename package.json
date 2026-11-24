@@ -1,0 +1,21 @@
+{
+  "name": "neverend-security-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Laboratório local de SQL Injection e XSS com Node.js, Express e MySQL.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "mysql2": "^3.14.1"
+  }
+}

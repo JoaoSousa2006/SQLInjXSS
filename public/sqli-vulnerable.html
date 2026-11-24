@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SQLi vulnerável · Neverend</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header class="header"><div class="wrap nav"><a class="brand" href="/"><span class="logo">N</span> NEVEREND LAB</a><nav class="links"><a href="/">Início</a><a class="active" href="/sqli-vulnerable.html">SQLi</a><a href="/sqli-fixed.html">SQLi Fixed</a><a href="/xss-vulnerable.html">XSS</a><a href="/xss-fixed.html">XSS Fixed</a></nav></div></header>
+<main class="wrap main">
+  <div class="page-title"><div><span class="eyebrow">SQL Injection · consulta real MySQL</span><h1>Busca vulnerável</h1></div><span class="tag red">VULNERABLE</span></div>
+  <div class="note">Somente para uso local. A entrada é concatenada ao SQL e múltiplas instruções estão habilitadas nesta conexão de laboratório. Nunca use esse padrão em uma aplicação real.</div>
+  <section class="panel"><h2>Pesquisar usuário pelo nome</h2><p class="muted">Teste um nome e depois tente os payloads abaixo. A sintaxe é MySQL. O retorno vem do servidor MySQL local.</p>
+    <div class="payloads"><button class="button secondary" type="button" data-payload="Alice">Alice</button><button class="button secondary" type="button" data-payload="' OR 1=1 -- ">Tautologia</button><button class="button secondary" type="button" data-payload="'; SHOW DATABASES; -- ">SHOW DATABASES</button></div>
+    <form id="searchForm"><div class="form-row"><input class="input" id="searchText" maxlength="120" placeholder="Digite um nome ou payload SQLi" autocomplete="off"><button class="button" type="submit">Pesquisar</button></div></form><div id="result" class="result">Aguardando consulta.</div>
+  </section>
+  <section class="panel"><h2>SQL enviado ao MySQL</h2><pre id="queryDisplay" class="code">SELECT id, name, email, role, status FROM users WHERE name LIKE '%[entrada]%' ORDER BY id</pre><div id="rows"></div></section>
+</main><footer class="footer"><div class="wrap">NEVEREND LAB · SQLi Vulnerable · apenas localhost</div></footer>
+<script>
+const form = document.getElementById('searchForm');
+const input = document.getElementById('searchText');
+const statusBox = document.getElementById('result');
+const queryBox = document.getElementById('queryDisplay');
+const rowsBox = document.getElementById('rows');
+document.querySelectorAll('[data-payload]').forEach(button => button.addEventListener('click', () => { input.value = button.dataset.payload; input.focus(); }));
+function renderSets(sets) {
+  rowsBox.replaceChildren();
+  (sets || []).forEach((set, index) => {
+    const heading = document.createElement('h3'); heading.textContent = `Resultado ${set.statement || index + 1}`; rowsBox.appendChild(heading);
+    if (set.rows && set.rows.length) {
+      const table = document.createElement('table'); table.className = 'data-table';
+      const columns = Object.keys(set.rows[0]);
+      const head = document.createElement('tr'); columns.forEach(key => { const th = document.createElement('th'); th.textContent = key; head.appendChild(th); });
+      const thead = document.createElement('thead'); thead.appendChild(head); table.appendChild(thead);
+      const body = document.createElement('tbody');
+      set.rows.forEach(row => { const tr = document.createElement('tr'); columns.forEach(key => { const td = document.createElement('td'); const value = row[key]; td.textContent = value == null ? '' : String(value); tr.appendChild(td); }); body.appendChild(tr); });
+      table.appendChild(body); rowsBox.appendChild(table);
+    } else { const p = document.createElement('p'); p.className = 'muted'; p.textContent = `Sem linhas retornadas${set.affectedRows ? ` · linhas afetadas: ${set.affectedRows}` : ''}.`; rowsBox.appendChild(p); }
+  });
+}
+form.addEventListener('submit', async event => {
+  event.preventDefault(); statusBox.className = 'result'; statusBox.textContent = 'Executando consulta vulnerável no MySQL...'; rowsBox.replaceChildren();
+  try {
+    const response = await fetch(`/api/users/vulnerable?name=${encodeURIComponent(input.value)}`);
+    const data = await response.json(); queryBox.textContent = data.sql || 'SQL não gerado';
+    if (!response.ok || !data.ok) { statusBox.className = 'result error'; statusBox.textContent = data.message || 'A consulta falhou.'; return; }
+    statusBox.className = 'result error'; statusBox.textContent = `Consulta executada pelo MySQL. Conjuntos de resultado: ${data.resultSets.length}.`;
+    renderSets(data.resultSets);
+  } catch (_error) { statusBox.className = 'result error'; statusBox.textContent = 'Falha ao chamar o servidor local.'; }
+});
+</script>
+</body></html>
